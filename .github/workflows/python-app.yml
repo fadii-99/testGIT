@@ -65,10 +65,8 @@ jobs:
             pip install -r requirements.txt
           
             # Start or restart FastAPI
-            if systemctl list-unit-files | grep -q fastapi.service; then
-              sudo systemctl restart fastapi.service
-            else
-              # fallback: run uvicorn in background
-              nohup venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
-            fi
+           
+            # fallback: run uvicorn in background
+            nohup venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+    
 
