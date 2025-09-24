@@ -41,23 +41,34 @@ jobs:
         username: root
         password: ${{ secrets.SERVER_PASSWORD }}
         script: |
-          # go to your app directory
-          cd /home/apps/fastapi-app
+            APP_DIR=/home/apps/fastapi-app
+          
+            # Create app dir if missing
+            mkdir -p $APP_DIR
+          
+            # Clone repo if missing
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone https://github.com/${{ github.repository }} $APP_DIR
+            fi
+          
+            cd $APP_DIR
+            git fetch origin main
+            git reset --hard origin/main
+          
+            # Setup venv if missing
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+            source venv/bin/activate
+          
+            pip install --upgrade pip
+            pip install -r requirements.txt
+          
+            # Start or restart FastAPI
+            if systemctl list-unit-files | grep -q fastapi.service; then
+              sudo systemctl restart fastapi.service
+            else
+              # fallback: run uvicorn in background
+              nohup venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+            fi
 
-          # pull latest code
-          git pull origin main
-
-          # activate virtual environment or create if missing
-          if [ ! -d "venv" ]; then
-            python3 -m venv venv
-          fi
-          source venv/bin/activate
-
-          # install deps
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-          # restart FastAPI with uvicorn + systemd/pm2
-          # Example with systemd service
-          sudo systemctl restart fastapi.service || \
-          uvicorn main:app --host 0.0.0.0 --port 8001 --reload --daemon
